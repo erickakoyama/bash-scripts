@@ -19,19 +19,25 @@ tr -d \' | \
 sort -u
 `;
 
-# Diff the two outputs and print line numbers only non-matches present in File2,
-# which represents language-keys that are not actually used anywwhere in the project.
-#
-# If we reverse the diff order, we should be able to find language keys in the source code that have no language key.
-unused_line_nums=$(diff --new-line-format='>%dn:%L' <(echo "$keys_in_source") <(echo "$keys") | \
+# Diff the two outputs and print key value pairs of line_num:lang_key only non-matches present in File2,
+# which represents language-keys that are not actually used anywwhere in the js code.
+unused_line_key_values=$(diff --new-line-format='>%dn:%L' <(echo "$keys_in_source") <(echo "$keys") | \
 	 grep '^>.*$' | \
-	 awk -F: '{print $1}' | \
 	 tr -d '>');
 
-for key in $unused_line_nums; do
-	# go through each line num and replace that line with a blank line
-	sed -i '' -e "$key s/.*//" $key_file_path;
+# Before deleting the key, we should check if it is used in any java files
+for key_value_pair in $unused_line_key_values; do
+	line_num=`echo "$key_value_pair" | cut -d: -f 1`;
+	key=`echo "$key_value_pair" | cut -d: -f 2`;
+	# If the string is a match within 20 characters, we'll call it a match, in case the string is concatenated.
+	if [ $(find ./src/main/java \( -name "*.java" \) -exec pcregrep -o --multiline \""${key:0:20}" {} \; | wc -l) -eq 0 ]
+	then
+		# replace line with a blank line
+		sed -i '' -e "$line_num s/.*//" $key_file_path;
+	else 
+		echo "Woops this language key is used in the .java files: ${key}";
+	fi
 done
 
-# delete all the blank lines
+# # # delete all the blank lines
 sed -i '' -e '/^$/d' $key_file_path;
