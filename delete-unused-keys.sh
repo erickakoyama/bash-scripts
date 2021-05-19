@@ -4,7 +4,7 @@
 
 # Get a sorted list of all keys in Language.properties
 key_file_path=`find ./src/main/resources/content -name "Language.properties"`;
-keys=`awk -F= '{print $1}' $key_file_path`;
+keys=`awk -F= '{print $1}' $key_file_path | sort -u`;
 
 # Keys found in project js
 # -- multiline for capturing language keys that might be broken to the next line, -o to only print part of line that matches pattern
